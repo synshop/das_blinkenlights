@@ -20,7 +20,8 @@ using namespace std;
 #define NUM_LEDS 646
 #define FADE_VAL 1
 #define FAST_FADE_VAL 16
-#define EFFECT_DELAY 30
+#define EFFECT_DELAY 120
+#define WAIT_DELAY 30
 
 #define EFFECTS 6
 
@@ -30,25 +31,6 @@ uint8_t alt_buffer[NUM_LEDS * 3];
 int signaled = 0;
 uint8_t lights_on = 0;
 
-/*
-// schedule structure definition
-struct schd_time
-{
-  int minute;
-  int hour;
-  int dow;
-  int month;
-  int year;
-};
-
-struct schedule_event
-{
-  struct schd_time start_time;
-  struct schd_time end_time;
-};
-
-struct schedule_event schedule[128];
-*/
 
 // functions
 
@@ -774,7 +756,7 @@ int main()
         case 0:
           // lights out
           FadeOut();
-          WaitUntil(EFFECT_DELAY);
+          WaitUntil(WAIT_DELAY);
           break;
         case 1:
           Rainbow(EFFECT_DELAY);
