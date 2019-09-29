@@ -167,7 +167,7 @@ uint8_t InSchedule(void)
         uint8_t event_in_event = 0;
 
         // cout << "Event: " << event_name << ", " << start_time << " - " << end_time << " : " << day_of_week << endl;
-        int secs = (ltm->tm_hour * 3600) + (ltm->tm_min * 60);
+        int secs = (ltm->tm_hour * 3600) + (ltm->tm_min * 60) + ltm->tm_sec;
         // cout << "time: " << secs << " - " << dow[ltm->tm_wday] << " - " << ltm->tm_hour << " : " << ltm->tm_min << endl;
 
         if(start_time != "")
@@ -237,6 +237,12 @@ uint8_t InSchedule(void)
         in_schedule |= event_in_event;
 
       }
+
+      start_time.clear();
+      end_time.clear();
+      day_of_week.clear();
+      disabled.clear();
+
       break;
     /* Data */
     case YAML_ALIAS_EVENT:
