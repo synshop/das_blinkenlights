@@ -1,0 +1,14 @@
+
+
+
+- read in schedule
+- wipe files in semaphor directory
+- start scheduler
+  - on scheduled event, load effect playlist, and play through sequence
+    playlists can be sequential or random
+    playlist items can be timed globally or individually
+  - if receive SIGUSR1 interrupt
+    - check semaphor director for task todo
+    - if task todo, fadeout, and run task
+      tasks can be run playlist and return to previous schedule, run external program, or stop current playlist
+
