@@ -12,3 +12,7 @@
     - if task todo, fadeout, and run task
       tasks can be run playlist and return to previous schedule, run external program, or stop current playlist
 
+
+# send process an interrupt
+kill -s SIGUSR1 `pidof blinkenlights`
+

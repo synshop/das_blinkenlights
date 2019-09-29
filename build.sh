@@ -1,4 +1,4 @@
 #!/bin/bash
 
-g++ blinkenlights.cpp -o blinkenlights -lwiringPi
+g++ blinkenlights.cpp -o blinkenlights -lwiringPi -lyaml
 
