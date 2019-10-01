@@ -2,8 +2,8 @@
 #include <string>
 #include <ctime>
 #include <csignal>
-
 #include <sstream>
+#include <fstream>
 #include <locale>
 #include <iomanip>
 
@@ -11,7 +11,6 @@
 #include <wiringPiSPI.h>
 #include <stdint.h>
 #include <unistd.h>
-
 #include <yaml.h>
 
 using namespace std;
@@ -22,8 +21,10 @@ using namespace std;
 #define FAST_FADE_VAL 16
 #define EFFECT_DELAY 120
 #define WAIT_DELAY 30
+#define PERSONAL_EFFECT_TIME 600
 
 #define EFFECTS 6
+#define CUSTOM_EFFECTS 3
 
 uint8_t buffer[NUM_LEDS * 3];
 uint8_t alt_buffer[NUM_LEDS * 3];
@@ -31,6 +32,8 @@ uint8_t alt_buffer[NUM_LEDS * 3];
 int signaled = 0;
 uint8_t lights_on = 0;
 
+time_t personal_effect_until;
+uint8_t p_r1, p_g1, p_b1, p_r2, p_g2, p_b2;
 
 // functions
 
@@ -335,55 +338,69 @@ uint8_t InSchedule(void)
   yaml_parser_delete(&parser);
   fclose(fh);
 
-/*
-
-read config and find mapping scalar of Events
-start of stream
- start of mapping
- - look for "Events"
-
- look for start of sequence
-   read in mappings till end of sequence
-   look for start of mapping
-     read in scalars till end of mapping
-     process event
-
-
-STREAM START
-Start Document
-Start Mapping
-Got scalar (value Events)
-
-Start Sequence
-Start Mapping
-Got scalar (value event_name)
-Got scalar (value Weekdays)
-Got scalar (value start_time)
-Got scalar (value 18:00)
-Got scalar (value end_time)
-Got scalar (value 22:00)
-Got scalar (value day_of_week)
-Got scalar (value Mo,Tu,We,Th,Fr)
-End Mapping
-Start Mapping
-Got scalar (value event_name)
-Got scalar (value Saturdays)
-Got scalar (value start_time)
-Got scalar (value 15:00)
-Got scalar (value end_time)
-Got scalar (value 22:00)
-Got scalar (value day_of_week)
-Got scalar (value Sa)
-End Mapping
-End Sequence
-End Mapping
-End Document
-STREAM END
-
-*/
-
   return in_schedule;
 }
+
+
+uint8_t InSemaphor(void)
+{
+  /*
+    Function reads in semaphor files to determine if we're being triggered to display
+  */
+  uint8_t in_semaphor = 0;
+
+  time_t now = time(0);
+
+  ifstream ifile("/var/www/html/bl_semaphor/outfile.txt");
+  if(ifile)
+  {
+    puts("Found Semaphor file");
+
+    uint8_t cnum = 0;
+    std::string line;
+    while(std::getline(ifile,line))
+    {
+      if(line.substr(0,1) == "#"
+         && line != "#000000"
+         && line.find_first_not_of("0123456789abcdefABCDEF",1) == std::string::npos
+         && line.length() == 7)
+      {
+        // valid color string
+        cnum++;
+
+        if(cnum == 1)
+        {
+          p_r1 = std::stoi(line.substr(1,2), 0, 16);
+          p_g1 = std::stoi(line.substr(3,2), 0, 16);
+          p_b1 = std::stoi(line.substr(5,2), 0, 16);
+        }
+        if(cnum == 2)
+        {
+          p_r2 = std::stoi(line.substr(1,2), 0, 16);
+          p_g2 = std::stoi(line.substr(3,2), 0, 16);
+          p_b2 = std::stoi(line.substr(5,2), 0, 16);
+        }
+      }
+    }
+
+    if(cnum == 1)
+    {
+      // only one color found, so set the second color 1/3 the value
+      p_r2 = p_r1 / 3;
+      p_g2 = p_g1 / 3;
+      p_b2 = p_b1 / 3;
+    }
+
+    in_semaphor = 1;
+
+    personal_effect_until = now + PERSONAL_EFFECT_TIME;
+
+  }
+  remove("/var/www/html/bl_semaphor/outfile.txt");
+
+  return(in_semaphor);
+}
+
 
 // effect sub functions
 
@@ -735,25 +752,50 @@ int main()
     while(!signaled)
     {
       time_t now = time(0);
-      char* dt = ctime(&now);
-      cout << dt;
+      struct tm * p = localtime(&now);
+      char s[100];
+      strftime(s, 100, "%c",p);
+      printf("%s: ", s);
+
+      //char* dt = ctime(&now);
+      //cout << dt;
 
       lights_on = InSchedule();
+      lights_on |= InSemaphor();
 
-      if(lights_on)
+      if(now < personal_effect_until)
       {
-        // if we're on, pick a random effect different than the last one displayed
         while(next_effect == current_effect)
         {
-          next_effect = 1 + (rand() % (EFFECTS - 1));
+          next_effect = (EFFECTS - CUSTOM_EFFECTS) + (rand() % (CUSTOM_EFFECTS));
         }
         current_effect = next_effect;
       }
       else
       {
-        // lights out
-        next_effect = 0;
-        current_effect = 0;
+        // clear personal custom colors if set
+        p_r1 = 0;
+        p_g1 = 0;
+        p_b1 = 0;
+        p_r2 = 0;
+        p_g2 = 0;
+        p_b2 = 0;
+
+        if(lights_on)
+        {
+          // if we're on, pick a random effect different than the last one displayed
+          while(next_effect == current_effect)
+          {
+            next_effect = 1 + (rand() % (EFFECTS - 1));
+          }
+          current_effect = next_effect;
+        }
+        else
+        {
+          // lights out
+          next_effect = 0;
+          current_effect = 0;
+        }
       }
 
       // display the current effect
@@ -761,28 +803,34 @@ int main()
       {
         case 0:
           // lights out
+          cout << "- wait -" << endl;
           FadeOut();
           WaitUntil(WAIT_DELAY);
           break;
+        /* non-customizable effects */
         case 1:
           Rainbow(EFFECT_DELAY);
           FadeOut();
           break;
         case 2:
-          RandomTwoColorFade(EFFECT_DELAY);
+          Sparkle(EFFECT_DELAY);
           FadeOut();
           break;
+        /* customizable effects */
         case 3:
           RandomWhite(EFFECT_DELAY);
           FadeOut();
           break;
         case 4:
-          Sparkle(EFFECT_DELAY);
+          RandomTwoColorFade(EFFECT_DELAY);
           FadeOut();
           break;
         case 5:
           RandomTwoColorSparkle(EFFECT_DELAY);
           FadeOut();
+          break;
+        case 6:
+          cout << "error effect 6\n";
           break;
       }
     }
