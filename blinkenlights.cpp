@@ -566,12 +566,24 @@ void RandomTwoColorSparkle(long num_seconds)
 {
   uint8_t r1, g1, b1, r2, g2, b2;
 
-  r1 = RandomColor(128);
-  g1 = RandomColor(128);
-  b1 = RandomColor(128);
-  b2 = RandomColor(128);
-  g2 = RandomColor(128);
-  r2 = RandomColor(128);
+  if(p_r1 || p_r2 || p_g1 || p_g2 || p_b1 || p_b2)
+  {
+    r1 = p_r1;
+    g1 = p_g1;
+    b1 = p_b1;
+    b2 = p_b2;
+    g2 = p_g2;
+    r2 = p_r2;
+  }
+  else
+  {
+    r1 = RandomColor(128);
+    g1 = RandomColor(128);
+    b1 = RandomColor(128);
+    b2 = RandomColor(128);
+    g2 = RandomColor(128);
+    r2 = RandomColor(128);
+  }
 
   cout << "Random Two Color Sparkle\n";
 
@@ -619,12 +631,24 @@ void RandomTwoColorFade(long num_seconds)
     cout << "Left\n";
   }
 
-  r1 = RandomColor(128);
-  g1 = RandomColor(128);
-  b1 = RandomColor(128);
-  b2 = RandomColor(128);
-  g2 = RandomColor(128);
-  r2 = RandomColor(128);
+  if(p_r1 || p_r2 || p_g1 || p_g2 || p_b1 || p_b2)
+  {
+    r1 = p_r1;
+    g1 = p_g1;
+    b1 = p_b1;
+    b2 = p_b2;
+    g2 = p_g2;
+    r2 = p_r2;
+  }
+  else
+  {
+    r1 = RandomColor(128);
+    g1 = RandomColor(128);
+    b1 = RandomColor(128);
+    b2 = RandomColor(128);
+    g2 = RandomColor(128);
+    r2 = RandomColor(128);
+  }
 
   Fill(0,321,r1,g1,b1,r2,g2,b2);
   Fill(322,645,r2,g2,b2,r1,g1,b1);
@@ -688,15 +712,32 @@ void RandomWhite(long num_seconds)
 {
   cout << "Random White\n";
 
+  uint8_t r1, g1, b1, r2, g2, b2;
+
+  if(p_r1 || p_r2 || p_g1 || p_g2 || p_b1 || p_b2)
+  {
+    r1 = p_r1;
+    g1 = p_g1;
+    b1 = p_b1;
+  }
+  else
+  {
+    r1 = 255;
+    g1 = 255;
+    b1 = 255;
+  }
+
   time_t until = time(0) + num_seconds;
 
   while(time(0) < until)
   {
     int pwmnum = rand() % NUM_LEDS;
-    uint8_t pwmval = rand() % 255;
-    buffer[pwmnum*3] = pwmval;
-    buffer[pwmnum*3+1] = pwmval;
-    buffer[pwmnum*3+2] = pwmval;
+//    float pwmval = (rand() % 255)/255;
+
+    buffer[pwmnum*3] = b1;
+    buffer[pwmnum*3+1] = g1;
+    buffer[pwmnum*3+2] = r1;
+
     displayBuffer();
     fadeBuffer(FADE_VAL);
     usleep(20);
