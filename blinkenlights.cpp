@@ -23,8 +23,8 @@ using namespace std;
 #define WAIT_DELAY 30
 #define PERSONAL_EFFECT_TIME 600
 
-#define EFFECTS 6
-#define CUSTOM_EFFECTS 3
+#define EFFECTS 7
+#define CUSTOM_EFFECTS 4
 
 uint8_t buffer[NUM_LEDS * 3];
 uint8_t alt_buffer[NUM_LEDS * 3];
@@ -668,6 +668,55 @@ void RandomTwoColorFade(long num_seconds)
   }
 }
 
+void RedAlert(long num_seconds)
+{
+  uint8_t r1, g1, b1, r2, g2, b2;
+
+  cout << "Red Alert\n";
+
+  if(p_r1 || p_r2 || p_g1 || p_g2 || p_b1 || p_b2)
+  {
+    r1 = p_r1;
+    g1 = p_g1;
+    b1 = p_b1;
+    b2 = p_b2;
+    g2 = p_g2;
+    r2 = p_r2;
+  }
+  else
+  {
+    r1 = RandomColor(128);
+    g1 = RandomColor(128);
+    b1 = RandomColor(128);
+    b2 = RandomColor(128);
+    g2 = RandomColor(128);
+    r2 = RandomColor(128);
+  }
+
+  // bottom right
+  Fill(0,172,r1,g1,b1,r2,g2,b2);
+  // top right
+  Fill(173,345,r2,g2,b2,r1,g1,b1);
+  // top left
+  Fill(346,495,r1,g1,b1,r2,g2,b2);
+  // bottom left
+  Fill(496,645,r2,g2,b2,r1,g1,b1);
+
+  displayBuffer();
+
+  time_t until = time(0) + num_seconds;
+
+  while(time(0) < until)
+  {
+    displayBuffer();
+    usleep(100);
+    if(signaled)
+    {
+      break;
+    }
+  }
+}
+
 void Rainbow(long num_seconds)
 {
   uint8_t direction = rand() % 2;
@@ -766,6 +815,8 @@ int main()
   if(wiringPiSPISetup(0, 6000000) < 0) {
     std::cerr << "wiringPiSPISetup failed" << std::endl;
   }
+  pinMode(2, OUTPUT);
+
 
   uint8_t led_frame[4];
   uint8_t r, g, b, brightness;
@@ -845,32 +896,44 @@ int main()
         case 0:
           // lights out
           cout << "- wait -" << endl;
+          digitalWrite(2, 0);
           FadeOut();
           WaitUntil(WAIT_DELAY);
           break;
         /* non-customizable effects */
         case 1:
+          digitalWrite(2, 1);
           Rainbow(EFFECT_DELAY);
           FadeOut();
           break;
         case 2:
+          digitalWrite(2, 1);
           Sparkle(EFFECT_DELAY);
           FadeOut();
           break;
         /* customizable effects */
         case 3:
+          digitalWrite(2, 1);
           RandomWhite(EFFECT_DELAY);
           FadeOut();
           break;
         case 4:
+          digitalWrite(2, 1);
           RandomTwoColorFade(EFFECT_DELAY);
           FadeOut();
           break;
         case 5:
+          digitalWrite(2, 1);
           RandomTwoColorSparkle(EFFECT_DELAY);
           FadeOut();
           break;
         case 6:
+          digitalWrite(2, 1);
+          RedAlert(EFFECT_DELAY);
+          FadeOut();
+          break;
+        case 7:
+          digitalWrite(2, 0);
           cout << "error effect 6\n";
           break;
       }
