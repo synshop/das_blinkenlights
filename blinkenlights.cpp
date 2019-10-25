@@ -542,25 +542,26 @@ void Fill(uint8_t *buffer, int start_led, int end_led, float r1, float g1, float
   }
 }
 
-void SinFade(uint8_t *buffer, int start_led, int end_led, float r1, float g1, float b1, float r2, float g2, float b2)
+void SinFade(uint8_t *buffer, int start_led, int size, float r1, float g1, float b1, float r2, float g2, float b2)
 {
   // sine fade color 1 to color 2 to color 1
   float r, g, b;
   float result;
-  float diff = end_led - start_led;
   float adjval;
 
-  for(int i = 0; i < diff; i++)
+  for(int i = 0; i < size; i++)
   {
-    adjval = (180/diff)*i;
+    adjval = (180/size)*i;
     result = sin(adjval * PI / 180);
     //cout << i << " " << adjval << " " << result << "\n";
-    r = (r1 * result) + (r2 * (1-result));
-    g = (g1 * result) + (g2 * (1-result));
-    b = (b1 * result) + (b2 * (1-result));
-    buffer[(start_led + i)*3] = b;
-    buffer[(start_led + i)*3+1] = g;
-    buffer[(start_led + i)*3+2] = r;
+    r = (r2 * result) + (r1 * (1-result));
+    g = (g2 * result) + (g1 * (1-result));
+    b = (b2 * result) + (b1 * (1-result));
+    int led_num = (start_led + i) % NUM_LEDS;
+
+    buffer[led_num*3] = b;
+    buffer[led_num*3+1] = g;
+    buffer[led_num*3+2] = r;
   }
 }
 
@@ -754,17 +755,20 @@ void RedAlert(long num_seconds)
   }
 
   // bottom right
-  SinFade(display_buffer, 0,172,r1,g1,b1,0,0,0);
+  SinFade(display_buffer, 0,172,0,0,0,r1,g1,b1);
   // top right
 //  Fill(display_buffer, 173,258,r2,g2,b2,r1,g1,b1);
 //  Fill(display_buffer, 259,345,r1,g1,b1,r2,g2,b2);
-  SinFade(display_buffer, 173,345,r2,g2,b2,0,0,0);
+//  SinFade(display_buffer, 173,345,0,0,0,r2,g2,b2);
+  SinFade(display_buffer, 173,172,0,0,0,r2,g2,b2);
   // top left
 //  Fill(display_buffer, 346,421,r2,g2,b2,r1,g1,b1);
 //  Fill(display_buffer, 422,495,r1,g1,b1,r2,g2,b2);
-  SinFade(display_buffer, 346,495,r2,g2,b2,0,0,0);
+//  SinFade(display_buffer, 346,495,0,0,0,r2,g2,b2);
+  SinFade(display_buffer, 346,149,0,0,0,r2,g2,b2);
   // bottom left
-  SinFade(display_buffer, 496,645,r1,g1,b1,0,0,0);
+//  SinFade(display_buffer, 496,645,0,0,0,r1,g1,b1);
+  SinFade(display_buffer, 496,149,0,0,0,r1,g1,b1);
 
   DisplayBuffer(display_buffer);
 
