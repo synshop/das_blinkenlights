@@ -12,10 +12,11 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <yaml.h>
+#include <math.h>
 
 using namespace std;
 
-
+#define PI 3.14159265
 #define NUM_LEDS 646
 #define FADE_VAL 1
 #define FAST_FADE_VAL 16
@@ -23,11 +24,19 @@ using namespace std;
 #define WAIT_DELAY 30
 #define PERSONAL_EFFECT_TIME 600
 
-#define EFFECTS 7
-#define CUSTOM_EFFECTS 4
+// mix effects
+#define HARD_MIX 1
+#define SUBTRACT 2
+#define XOR 3
+#define MAX 4
 
-uint8_t buffer[NUM_LEDS * 3];
-uint8_t alt_buffer[NUM_LEDS * 3];
+// number of effects
+#define EFFECTS 8
+#define CUSTOM_EFFECTS 5
+
+uint8_t display_buffer[NUM_LEDS * 3];
+uint8_t buffer1[NUM_LEDS * 3];
+uint8_t buffer2[NUM_LEDS * 3];
 
 int signaled = 0;
 uint8_t lights_on = 0;
@@ -43,7 +52,7 @@ void signalHandler(int signum)
   cout << "signal: " << signaled << endl;
 }
 
-void displayBuffer(void)
+void DisplayBuffer(uint8_t *buffer)
 {
   uint8_t led_frame[4];
 
@@ -404,7 +413,7 @@ uint8_t InSemaphor(void)
 
 // effect sub functions
 
-void fadeBuffer(uint8_t fade_val)
+void FadeBuffer(uint8_t *buffer, uint8_t fade_val)
 {
   for(int i = 0; i < NUM_LEDS * 3; i++)
   {
@@ -415,6 +424,36 @@ void fadeBuffer(uint8_t fade_val)
     else if(buffer[i] > 0)
     {
       buffer[i] = 0;
+    }
+  }
+}
+
+void MixBuffers(uint8_t *buffer1, uint8_t *buffer2, uint8_t *mixed_buffer, uint8_t mix_effect)
+{
+  for(int i = 0; i < NUM_LEDS * 3; i++)
+  {
+    switch(mix_effect)
+    {
+    case HARD_MIX:
+      mixed_buffer[i] = std::min((buffer1[i] + buffer2[i]), 255);
+
+      break;
+
+    case SUBTRACT:
+      mixed_buffer[i] = std::max((buffer1[i] - buffer2[i]), 0);
+
+      //
+      break;
+
+    case XOR:
+      mixed_buffer[i] = buffer1[i] ^ buffer2[i];
+
+      //
+      break;
+    case MAX:
+      mixed_buffer[i] = std::max(buffer1[i], buffer2[i]);
+
+      break;
     }
   }
 }
@@ -431,7 +470,7 @@ uint8_t RandomColor(uint8_t seed)
   }
 }
 
-void Rotate(uint8_t direction)
+void Rotate(uint8_t *buffer, uint8_t direction)
 {
   uint8_t r, g, b;
 
@@ -467,7 +506,7 @@ void Rotate(uint8_t direction)
   }
 }
 
-void Fill(int start_led, int end_led, float r1, float g1, float b1, float r2, float g2, float b2)
+void Fill(uint8_t *buffer, int start_led, int end_led, float r1, float g1, float b1, float r2, float g2, float b2)
 {
   float r, g, b, r_inc, g_inc, b_inc;
   int steps;
@@ -503,6 +542,27 @@ void Fill(int start_led, int end_led, float r1, float g1, float b1, float r2, fl
   }
 }
 
+void SinFade(uint8_t *buffer, int start_led, int end_led, float r1, float g1, float b1, float r2, float g2, float b2)
+{
+  // sine fade color 1 to color 2 to color 1
+  float r, g, b;
+  float result;
+  float diff = end_led - start_led;
+  float adjval;
+
+  for(int i = 0; i < diff; i++)
+  {
+    adjval = (180/diff)*i;
+    result = sin(adjval * PI / 180);
+    //cout << i << " " << adjval << " " << result << "\n";
+    r = (r1 * result) + (r2 * (1-result));
+    g = (g1 * result) + (g2 * (1-result));
+    b = (b1 * result) + (b2 * (1-result));
+    buffer[(start_led + i)*3] = b;
+    buffer[(start_led + i)*3+1] = g;
+    buffer[(start_led + i)*3+2] = r;
+  }
+}
 
 
 // effect functions
@@ -511,8 +571,8 @@ void FadeOut(void) {
   // fade out
   for (uint8_t loops=0; loops < 16; loops++)
   {
-    fadeBuffer(FAST_FADE_VAL);
-    displayBuffer();
+    FadeBuffer(display_buffer, FAST_FADE_VAL);
+    DisplayBuffer(display_buffer);
     usleep(20);
   }
 }
@@ -548,12 +608,12 @@ void Sparkle(long num_seconds)
     green_val = RandomColor(128);
     blue_val = RandomColor(128);
 
-    buffer[pwmnum*3] = blue_val;
-    buffer[pwmnum*3+1] = green_val;
-    buffer[pwmnum*3+2] = red_val;
+    display_buffer[pwmnum*3] = blue_val;
+    display_buffer[pwmnum*3+1] = green_val;
+    display_buffer[pwmnum*3+2] = red_val;
 
-    displayBuffer();
-    fadeBuffer(FADE_VAL);
+    DisplayBuffer(display_buffer);
+    FadeBuffer(display_buffer, FADE_VAL);
     usleep(20);
     if(signaled)
     {
@@ -595,19 +655,19 @@ void RandomTwoColorSparkle(long num_seconds)
 
     if(rand() % 255 > 128)
     {
-      buffer[pwmnum*3] = b1;
-      buffer[pwmnum*3+1] = g1;
-      buffer[pwmnum*3+2] = r1;
+      display_buffer[pwmnum*3] = b1;
+      display_buffer[pwmnum*3+1] = g1;
+      display_buffer[pwmnum*3+2] = r1;
     }
     else
     {
-      buffer[pwmnum*3] = b2;
-      buffer[pwmnum*3+1] = g2;
-      buffer[pwmnum*3+2] = r2;
+      display_buffer[pwmnum*3] = b2;
+      display_buffer[pwmnum*3+1] = g2;
+      display_buffer[pwmnum*3+2] = r2;
     }
 
-    displayBuffer();
-    fadeBuffer(FADE_VAL);
+    DisplayBuffer(display_buffer);
+    FadeBuffer(display_buffer, FADE_VAL);
     usleep(20);
     if(signaled)
     {
@@ -650,16 +710,16 @@ void RandomTwoColorFade(long num_seconds)
     r2 = RandomColor(128);
   }
 
-  Fill(0,321,r1,g1,b1,r2,g2,b2);
-  Fill(322,645,r2,g2,b2,r1,g1,b1);
-  displayBuffer();
+  Fill(display_buffer, 0,321,r1,g1,b1,r2,g2,b2);
+  Fill(display_buffer, 322,645,r2,g2,b2,r1,g1,b1);
+  DisplayBuffer(display_buffer);
 
   time_t until = time(0) + num_seconds;
 
   while(time(0) < until)
   {
-    displayBuffer();
-    Rotate(direction);
+    DisplayBuffer(display_buffer);
+    Rotate(display_buffer, direction);
     usleep(100);
     if(signaled)
     {
@@ -694,21 +754,25 @@ void RedAlert(long num_seconds)
   }
 
   // bottom right
-  Fill(0,172,r1,g1,b1,r2,g2,b2);
+  SinFade(display_buffer, 0,172,r1,g1,b1,0,0,0);
   // top right
-  Fill(173,345,r2,g2,b2,r1,g1,b1);
+//  Fill(display_buffer, 173,258,r2,g2,b2,r1,g1,b1);
+//  Fill(display_buffer, 259,345,r1,g1,b1,r2,g2,b2);
+  SinFade(display_buffer, 173,345,r2,g2,b2,0,0,0);
   // top left
-  Fill(346,495,r1,g1,b1,r2,g2,b2);
+//  Fill(display_buffer, 346,421,r2,g2,b2,r1,g1,b1);
+//  Fill(display_buffer, 422,495,r1,g1,b1,r2,g2,b2);
+  SinFade(display_buffer, 346,495,r2,g2,b2,0,0,0);
   // bottom left
-  Fill(496,645,r2,g2,b2,r1,g1,b1);
+  SinFade(display_buffer, 496,645,r1,g1,b1,0,0,0);
 
-  displayBuffer();
+  DisplayBuffer(display_buffer);
 
   time_t until = time(0) + num_seconds;
 
   while(time(0) < until)
   {
-    displayBuffer();
+    DisplayBuffer(display_buffer);
     usleep(100);
     if(signaled)
     {
@@ -733,21 +797,89 @@ void Rainbow(long num_seconds)
 
   float inc = NUM_LEDS / 6;
 
-  Fill(0,        int(inc),     255,0,  0,    255,255,0);
-  Fill(int(inc), int(inc*2),   255,255,0,    0,  255,0);
-  Fill(int(inc*2), int(inc*3), 0,  255,0,    0,  255,255);
-  Fill(int(inc*3), int(inc*4), 0,  255,255,  0,  0,  255);
-  Fill(int(inc*4), int(inc*5), 0,  0,  255,  255,0,  255);
-  Fill(int(inc*5), (NUM_LEDS-1), 255,0,  255,  255,0,  0);
+  Fill(display_buffer, 0,        int(inc),     255,0,  0,    255,255,0);
+  Fill(display_buffer, int(inc), int(inc*2),   255,255,0,    0,  255,0);
+  Fill(display_buffer, int(inc*2), int(inc*3), 0,  255,0,    0,  255,255);
+  Fill(display_buffer, int(inc*3), int(inc*4), 0,  255,255,  0,  0,  255);
+  Fill(display_buffer, int(inc*4), int(inc*5), 0,  0,  255,  255,0,  255);
+  Fill(display_buffer, int(inc*5), (NUM_LEDS-1), 255,0,  255,  255,0,  0);
 
-  displayBuffer();
+  DisplayBuffer(display_buffer);
 
   time_t until = time(0) + num_seconds;
 
   while(time(0) < until)
   {
-    displayBuffer();
-    Rotate(direction);
+    DisplayBuffer(display_buffer);
+    Rotate(display_buffer, direction);
+    usleep(100);
+    if(signaled)
+    {
+      break;
+    }
+  }
+}
+
+
+void RainbowSparkles(long num_seconds)
+{
+  uint8_t direction = rand() % 2;
+
+  uint8_t r1, g1, b1, r2, g2, b2;
+
+  if(p_r1 || p_r2 || p_g1 || p_g2 || p_b1 || p_b2)
+  {
+    r1 = p_r1;
+    g1 = p_g1;
+    b1 = p_b1;
+  }
+  else
+  {
+    r1 = 255;
+    g1 = 255;
+    b1 = 255;
+  }
+
+  cout << "Rainbow Sparkles ";
+
+  if(direction)
+  {
+    cout << "Right\n";
+  }
+  else
+  {
+    cout << "Left\n";
+  }
+
+  float inc = NUM_LEDS / 6;
+
+  Fill(buffer1, 0,        int(inc),     255,0,  0,    255,255,0);
+  Fill(buffer1, int(inc), int(inc*2),   255,255,0,    0,  255,0);
+  Fill(buffer1, int(inc*2), int(inc*3), 0,  255,0,    0,  255,255);
+  Fill(buffer1, int(inc*3), int(inc*4), 0,  255,255,  0,  0,  255);
+  Fill(buffer1, int(inc*4), int(inc*5), 0,  0,  255,  255,0,  255);
+  Fill(buffer1, int(inc*5), (NUM_LEDS-1), 255,0,  255,  255,0,  0);
+
+  DisplayBuffer(display_buffer);
+
+  time_t until = time(0) + num_seconds;
+
+  while(time(0) < until)
+  {
+    int pwmnum = rand() % NUM_LEDS;
+
+    buffer2[pwmnum*3] = b1;
+    buffer2[pwmnum*3+1] = g1;
+    buffer2[pwmnum*3+2] = r1;
+
+    MixBuffers(buffer1, buffer2, display_buffer, HARD_MIX);
+    DisplayBuffer(display_buffer);
+    FadeBuffer(buffer2, FADE_VAL);
+
+
+
+    DisplayBuffer(display_buffer);
+    Rotate(buffer1, direction);
     usleep(100);
     if(signaled)
     {
@@ -783,12 +915,12 @@ void RandomWhite(long num_seconds)
     int pwmnum = rand() % NUM_LEDS;
 //    float pwmval = (rand() % 255)/255;
 
-    buffer[pwmnum*3] = b1;
-    buffer[pwmnum*3+1] = g1;
-    buffer[pwmnum*3+2] = r1;
+    display_buffer[pwmnum*3] = b1;
+    display_buffer[pwmnum*3+1] = g1;
+    display_buffer[pwmnum*3+2] = r1;
 
-    displayBuffer();
-    fadeBuffer(FADE_VAL);
+    DisplayBuffer(display_buffer);
+    FadeBuffer(display_buffer, FADE_VAL);
     usleep(20);
     if(signaled)
     {
@@ -828,12 +960,12 @@ int main()
   // max brightness to reduce end of strip flicker
   brightness = 7;
 
-  // set frame buffer
+  // set frame display_buffer
   for(int i = 0; i < NUM_LEDS; i++)
   {
-    buffer[i*4] = b;
-    buffer[i*4+1] = g;
-    buffer[i*4+2] = r;
+    display_buffer[i*4] = b;
+    display_buffer[i*4+1] = g;
+    display_buffer[i*4+2] = r;
   }
 
   // main loop
@@ -933,6 +1065,11 @@ int main()
           FadeOut();
           break;
         case 7:
+          digitalWrite(2, 1);
+          RainbowSparkles(EFFECT_DELAY);
+          FadeOut();
+          break;
+        case 8:
           digitalWrite(2, 0);
           cout << "error effect 6\n";
           break;
