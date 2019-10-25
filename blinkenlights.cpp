@@ -31,8 +31,8 @@ using namespace std;
 #define MAX 4
 
 // number of effects
-#define EFFECTS 8
-#define CUSTOM_EFFECTS 5
+#define EFFECTS 9
+#define CUSTOM_EFFECTS 6
 
 uint8_t display_buffer[NUM_LEDS * 3];
 uint8_t buffer1[NUM_LEDS * 3];
@@ -542,7 +542,7 @@ void Fill(uint8_t *buffer, int start_led, int end_led, float r1, float g1, float
   }
 }
 
-void SinFade(uint8_t *buffer, int start_led, int size, float r1, float g1, float b1, float r2, float g2, float b2)
+void SinFade(uint8_t *buffer, uint8_t mode, int start_led, int size, float r1, float g1, float b1, float r2, float g2, float b2)
 {
   // sine fade color 1 to color 2 to color 1
   float r, g, b;
@@ -559,9 +559,18 @@ void SinFade(uint8_t *buffer, int start_led, int size, float r1, float g1, float
     b = (b2 * result) + (b1 * (1-result));
     int led_num = (start_led + i) % NUM_LEDS;
 
-    buffer[led_num*3] = b;
-    buffer[led_num*3+1] = g;
-    buffer[led_num*3+2] = r;
+    if(mode)
+    {
+      buffer[led_num*3] = std::max(b, float(buffer[led_num*3]));
+      buffer[led_num*3+1] = std::max(g, float(buffer[led_num*3+1]));
+      buffer[led_num*3+2] = std::max(r, float(buffer[led_num*3+2]));
+    }
+    else
+    {
+      buffer[led_num*3] = b;
+      buffer[led_num*3+1] = g;
+      buffer[led_num*3+2] = r;
+    }
   }
 }
 
@@ -755,20 +764,20 @@ void RedAlert(long num_seconds)
   }
 
   // bottom right
-  SinFade(display_buffer, 0,172,0,0,0,r1,g1,b1);
+  SinFade(display_buffer, 0, 0,172,0,0,0,r1,g1,b1);
   // top right
 //  Fill(display_buffer, 173,258,r2,g2,b2,r1,g1,b1);
 //  Fill(display_buffer, 259,345,r1,g1,b1,r2,g2,b2);
 //  SinFade(display_buffer, 173,345,0,0,0,r2,g2,b2);
-  SinFade(display_buffer, 173,172,0,0,0,r2,g2,b2);
+  SinFade(display_buffer, 0, 173,172,0,0,0,r2,g2,b2);
   // top left
 //  Fill(display_buffer, 346,421,r2,g2,b2,r1,g1,b1);
 //  Fill(display_buffer, 422,495,r1,g1,b1,r2,g2,b2);
 //  SinFade(display_buffer, 346,495,0,0,0,r2,g2,b2);
-  SinFade(display_buffer, 346,149,0,0,0,r2,g2,b2);
+  SinFade(display_buffer, 0, 346,149,0,0,0,r2,g2,b2);
   // bottom left
 //  SinFade(display_buffer, 496,645,0,0,0,r1,g1,b1);
-  SinFade(display_buffer, 496,149,0,0,0,r1,g1,b1);
+  SinFade(display_buffer, 0, 496,149,0,0,0,r1,g1,b1);
 
   DisplayBuffer(display_buffer);
 
@@ -884,6 +893,96 @@ void RainbowSparkles(long num_seconds)
 
     DisplayBuffer(display_buffer);
     Rotate(buffer1, direction);
+    usleep(100);
+    if(signaled)
+    {
+      break;
+    }
+  }
+}
+
+
+void LavaLamp(long num_seconds)
+{
+  uint8_t r1, g1, b1, r2, g2, b2;
+  uint8_t blend = rand() % 4 + 1;
+  uint8_t total_blobs = rand() % 7 + 7;
+
+  if(p_r1 || p_r2 || p_g1 || p_g2 || p_b1 || p_b2)
+  {
+    r1 = p_r1;
+    g1 = p_g1;
+    b1 = p_b1;
+    b2 = p_b2;
+    g2 = p_g2;
+    r2 = p_r2;
+  }
+  else
+  {
+    r1 = std::max(RandomColor(128), RandomColor(128));
+    g1 = RandomColor(128);
+    b1 = RandomColor(128);
+    r2 = RandomColor(128);
+    g2 = RandomColor(128);
+    b2 = RandomColor(128);
+  }
+
+  cout << "Lava Lamp\n";
+
+  // seven blobs
+  // position, color, size, direction
+  float blobs[56];
+
+  for(int i=0 ; i < total_blobs ; i++)
+  {
+    blobs[i*4] = rand() % NUM_LEDS;
+    blobs[i*4+1] = rand() % 2;
+    blobs[i*4+2] = rand() % 80 + 10;
+    blobs[i*4+3] = float((rand() % 150)-75)/100;
+  }
+
+  time_t until = time(0) + num_seconds;
+
+  while(time(0) < until)
+  {
+    // clear work buffers
+    for(int i=0 ; i < NUM_LEDS * 3 ; i++)
+    {
+      buffer1[i] = 0;
+      buffer2[i] = 0;
+    }
+
+    // process blobs
+    for(int i=0 ; i < total_blobs ; i++)
+    {
+      // move blob
+      blobs[i*4] = blobs[i*4] + blobs[i*4+3];
+      if(blobs[i*4] < 0)
+      {
+        blobs[i*4] = blobs[i*4] + NUM_LEDS;
+      }
+      if(blobs[i*4] > NUM_LEDS)
+      {
+        blobs[i*4] = blobs[i*4] - NUM_LEDS;
+      }
+
+      // adjust blob size
+      blobs[i*4+2] = blobs[i*4+2] + ((rand() % 100)-50)/100;
+
+      // paint blob
+      if(blobs[i*4+1])
+      {
+        SinFade(buffer1, 1, int(blobs[i*4]), int(blobs[i*4+2]), 0,0,0,r1,g1,b1);
+      }
+      else
+      {
+        SinFade(buffer2, 1, int(blobs[i*4]), int(blobs[i*4+2]), 0,0,0,r2,g2,b2);
+      }
+    }
+
+    MixBuffers(buffer1, buffer2, display_buffer, blend);
+    DisplayBuffer(display_buffer);
+
     usleep(100);
     if(signaled)
     {
@@ -1074,6 +1173,11 @@ int main()
           FadeOut();
           break;
         case 8:
+          digitalWrite(2, 1);
+          LavaLamp(EFFECT_DELAY);
+          FadeOut();
+          break;
+        case 9:
           digitalWrite(2, 0);
           cout << "error effect 6\n";
           break;
