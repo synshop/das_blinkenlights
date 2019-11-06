@@ -115,6 +115,21 @@ uint8_t InSchedule(void)
     "Sa"
   };
 
+  const static string mon[] = {
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  };
+
   FILE *fh = fopen("schedule.conf", "r");
   yaml_parser_t parser;
   yaml_event_t  event;   /* New variable */
@@ -124,7 +139,7 @@ uint8_t InSchedule(void)
   uint8_t in_mapping = 0;
   uint8_t in_read = 0;
 
-  string event_name, start_time, end_time, day_of_week, disabled;
+  string event_name, start_time, end_time, day_of_week, week_day_number, month, day_of_month, year, disabled;
 
   /* Initialize parser */
   if(!yaml_parser_initialize(&parser))
@@ -241,6 +256,43 @@ uint8_t InSchedule(void)
           }
         }
 
+        if(week_day_number != "")
+        {
+          if(atoi(week_day_number.c_str()) != (((ltm->tm_mday - 1)/7)+1))
+          {
+            // Day of the week not found in schedule
+            event_in_event = 0;
+          }
+        }
+
+        if(month != "")
+        {
+          // cout << "month: " << month << endl;
+          if(month.find(mon[ltm->tm_mon]) == std::string::npos)
+          {
+            // Day of the week not found in schedule
+            event_in_event = 0;
+          }
+        }
+
+        if(day_of_month != "")
+        {
+          if(atoi(day_of_month.c_str()) != ltm->tm_mday)
+          {
+            // Day of the week not found in schedule
+            event_in_event = 0;
+          }
+        }
+
+        if(year != "")
+        {
+          if(atoi(year.c_str()) != (ltm->tm_year + 1900))
+          {
+            // Day of the week not found in schedule
+            event_in_event = 0;
+          }
+        }
+
         if(disabled == "true")
         {
           // Schedule is disabled
@@ -253,6 +305,10 @@ uint8_t InSchedule(void)
       start_time.clear();
       end_time.clear();
       day_of_week.clear();
+      week_day_number.clear();
+      month.clear();
+      day_of_month.clear();
+      year.clear();
       disabled.clear();
 
       break;
@@ -296,6 +352,26 @@ uint8_t InSchedule(void)
               disabled = reinterpret_cast<char*>(event.data.scalar.value);
 
               break;
+            case 6:
+              // read in Month next
+              month = reinterpret_cast<char*>(event.data.scalar.value);
+
+              break;
+            case 7:
+              // read in Day next
+              day_of_month = reinterpret_cast<char*>(event.data.scalar.value);
+
+              break;
+            case 8:
+              // read in Yeak next
+              year = reinterpret_cast<char*>(event.data.scalar.value);
+
+              break;
+            case 9:
+              // read in Week day number next
+              week_day_number = reinterpret_cast<char*>(event.data.scalar.value);
+
+              break;
           }
           in_read = 0;
         }
@@ -326,6 +402,26 @@ uint8_t InSchedule(void)
           {
             // read in Disabled
             in_read = 5;
+          }
+          if(strcmp(reinterpret_cast<const char *>(event.data.scalar.value), "month") == 0)
+          {
+            // read in Day of Week next
+            in_read = 6;
+          }
+          if(strcmp(reinterpret_cast<const char *>(event.data.scalar.value), "day") == 0)
+          {
+            // read in Day of Week next
+            in_read = 7;
+          }
+          if(strcmp(reinterpret_cast<const char *>(event.data.scalar.value), "year") == 0)
+          {
+            // read in Day of Week next
+            in_read = 8;
+          }
+          if(strcmp(reinterpret_cast<const char *>(event.data.scalar.value), "week_day_number") == 0)
+          {
+            // read in Day of Week next
+            in_read = 9;
           }
         }
       }
