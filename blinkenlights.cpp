@@ -29,10 +29,26 @@ using namespace std;
 #define SUBTRACT 2
 #define XOR 3
 #define MAX 4
+#define REPLACE 5
 
 // number of effects
 #define EFFECTS 9
 #define CUSTOM_EFFECTS 6
+
+#define STATIC_EFFECTS 2
+
+const static string effects[] = {
+    // non-customizable
+    "Rainbow",
+    "Sparkle",
+    // customizable
+    "RandomWhite",
+    "RandomTwoColorFade",
+    "RandomTwoColorSparkle",
+    "RedAlert",
+    "RainbowSparkles",
+    "LavaLamp"
+};
 
 uint8_t display_buffer[NUM_LEDS * 3];
 uint8_t buffer1[NUM_LEDS * 3];
@@ -526,30 +542,56 @@ void FadeBuffer(uint8_t *buffer, uint8_t fade_val)
 
 void MixBuffers(uint8_t *buffer1, uint8_t *buffer2, uint8_t *mixed_buffer, uint8_t mix_effect)
 {
-  for(int i = 0; i < NUM_LEDS * 3; i++)
+  if(mix_effect == REPLACE)
   {
-    switch(mix_effect)
+    for(int i = 0; i < NUM_LEDS; i++)
     {
-    case HARD_MIX:
-      mixed_buffer[i] = std::min((buffer1[i] + buffer2[i]), 255);
+      switch(mix_effect)
+      {
+      case REPLACE:
+        if(buffer2[i*3] || buffer2[i*3+1] || buffer2[i*3+2])
+        {
+          mixed_buffer[i*3] = buffer2[i*3];
+          mixed_buffer[i*3+1] = buffer2[i*3+1];
+          mixed_buffer[i*3+2] = buffer2[i*3+2];
+        }
+        else
+        {
+          mixed_buffer[i*3] = buffer1[i*3];
+          mixed_buffer[i*3+1] = buffer1[i*3+1];
+          mixed_buffer[i*3+2] = buffer1[i*3+2];
+        }
+        break;
+      }
+    }
+  }
+  else
+  {
+    for(int i = 0; i < NUM_LEDS * 3; i++)
+    {
+      switch(mix_effect)
+      {
+      case HARD_MIX:
+        mixed_buffer[i] = std::min((buffer1[i] + buffer2[i]), 255);
 
-      break;
+        break;
 
-    case SUBTRACT:
-      mixed_buffer[i] = std::max((buffer1[i] - buffer2[i]), 0);
+      case SUBTRACT:
+        mixed_buffer[i] = std::max((buffer1[i] - buffer2[i]), 0);
 
-      //
-      break;
+        //
+        break;
 
-    case XOR:
-      mixed_buffer[i] = buffer1[i] ^ buffer2[i];
+      case XOR:
+        mixed_buffer[i] = buffer1[i] ^ buffer2[i];
 
-      //
-      break;
-    case MAX:
-      mixed_buffer[i] = std::max(buffer1[i], buffer2[i]);
+        //
+        break;
+      case MAX:
+        mixed_buffer[i] = std::max(buffer1[i], buffer2[i]);
 
-      break;
+        break;
+      }
     }
   }
 }
@@ -934,19 +976,21 @@ void RainbowSparkles(long num_seconds)
 {
   uint8_t direction = rand() % 2;
 
-  uint8_t r1, g1, b1, r2, g2, b2;
+  uint8_t r1, g1, b1, r2, g2, b2, mixval;
 
   if(p_r1 || p_r2 || p_g1 || p_g2 || p_b1 || p_b2)
   {
     r1 = p_r1;
     g1 = p_g1;
     b1 = p_b1;
+    mixval = REPLACE;
   }
   else
   {
     r1 = 255;
     g1 = 255;
     b1 = 255;
+    mixval = HARD_MIX;
   }
 
   cout << "Rainbow Sparkles ";
@@ -981,7 +1025,7 @@ void RainbowSparkles(long num_seconds)
     buffer2[pwmnum*3+1] = g1;
     buffer2[pwmnum*3+2] = r1;
 
-    MixBuffers(buffer1, buffer2, display_buffer, HARD_MIX);
+    MixBuffers(buffer1, buffer2, display_buffer, mixval);
     DisplayBuffer(display_buffer);
     FadeBuffer(buffer2, FADE_VAL);
 
@@ -1275,7 +1319,7 @@ int main()
           break;
         case 9:
           digitalWrite(2, 0);
-          cout << "error effect 6\n";
+          cout << "error no effect defined\n";
           break;
       }
     }
