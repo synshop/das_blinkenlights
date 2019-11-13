@@ -209,9 +209,7 @@ uint8_t InSchedule(void)
       {
         uint8_t event_in_event = 0;
 
-        // cout << "Event: " << event_name << ", " << start_time << " - " << end_time << " : " << day_of_week << endl;
         int secs = (ltm->tm_hour * 3600) + (ltm->tm_min * 60) + ltm->tm_sec;
-        // cout << "time: " << secs << " - " << dow[ltm->tm_wday] << " - " << ltm->tm_hour << " : " << ltm->tm_min << endl;
 
         if(start_time != "")
         {
@@ -228,8 +226,6 @@ uint8_t InSchedule(void)
           hr_time_int = atoi(hr_time.c_str());
           min_time_int = atoi(min_time.c_str());
           start_secs = (hr_time_int * 3600) + (min_time_int * 60);
-
-          // cout << start_secs << " - " << hr_time_int << " : " << min_time_int << endl;
 
           if(secs >= start_secs)
           {
@@ -253,8 +249,6 @@ uint8_t InSchedule(void)
           hr_time_int = atoi(hr_time.c_str());
           min_time_int = atoi(min_time.c_str());
           end_secs = (hr_time_int * 3600) + (min_time_int * 60);
-
-          // cout << end_secs << " - " << hr_time_int << " : " << min_time_int << endl;
 
           if(secs >= end_secs)
           {
@@ -283,7 +277,6 @@ uint8_t InSchedule(void)
 
         if(month != "")
         {
-          // cout << "month: " << month << endl;
           if(month.find(mon[ltm->tm_mon]) == std::string::npos)
           {
             // Day of the week not found in schedule
@@ -579,13 +572,11 @@ void MixBuffers(uint8_t *buffer1, uint8_t *buffer2, uint8_t *mixed_buffer, uint8
       case SUBTRACT:
         mixed_buffer[i] = std::max((buffer1[i] - buffer2[i]), 0);
 
-        //
         break;
 
       case XOR:
         mixed_buffer[i] = buffer1[i] ^ buffer2[i];
 
-        //
         break;
       case MAX:
         mixed_buffer[i] = std::max(buffer1[i], buffer2[i]);
@@ -691,7 +682,7 @@ void SinFade(uint8_t *buffer, uint8_t mode, int start_led, int size, float r1, f
   {
     adjval = (180/size)*i;
     result = sin(adjval * PI / 180);
-    //cout << i << " " << adjval << " " << result << "\n";
+
     r = (r2 * result) + (r1 * (1-result));
     g = (g2 * result) + (g1 * (1-result));
     b = (b2 * result) + (b1 * (1-result));
@@ -902,19 +893,12 @@ void RedAlert(long num_seconds)
   }
 
   // bottom right
-  SinFade(display_buffer, 0, 0,172,0,0,0,r1,g1,b1);
+  SinFade(display_buffer, 0, 0,  172,0,0,0,r1,g1,b1);
   // top right
-//  Fill(display_buffer, 173,258,r2,g2,b2,r1,g1,b1);
-//  Fill(display_buffer, 259,345,r1,g1,b1,r2,g2,b2);
-//  SinFade(display_buffer, 173,345,0,0,0,r2,g2,b2);
   SinFade(display_buffer, 0, 173,172,0,0,0,r2,g2,b2);
   // top left
-//  Fill(display_buffer, 346,421,r2,g2,b2,r1,g1,b1);
-//  Fill(display_buffer, 422,495,r1,g1,b1,r2,g2,b2);
-//  SinFade(display_buffer, 346,495,0,0,0,r2,g2,b2);
   SinFade(display_buffer, 0, 346,149,0,0,0,r2,g2,b2);
   // bottom left
-//  SinFade(display_buffer, 496,645,0,0,0,r1,g1,b1);
   SinFade(display_buffer, 0, 496,149,0,0,0,r1,g1,b1);
 
   DisplayBuffer(display_buffer);
@@ -1028,8 +1012,6 @@ void RainbowSparkles(long num_seconds)
     MixBuffers(buffer1, buffer2, display_buffer, mixval);
     DisplayBuffer(display_buffer);
     FadeBuffer(buffer2, FADE_VAL);
-
-
 
     DisplayBuffer(display_buffer);
     Rotate(buffer1, direction);
@@ -1156,7 +1138,6 @@ void RandomWhite(long num_seconds)
   while(time(0) < until)
   {
     int pwmnum = rand() % NUM_LEDS;
-//    float pwmval = (rand() % 255)/255;
 
     display_buffer[pwmnum*3] = b1;
     display_buffer[pwmnum*3+1] = g1;
@@ -1223,9 +1204,6 @@ int main()
       char s[100];
       strftime(s, 100, "%c",p);
       printf("%s: ", s);
-
-      //char* dt = ctime(&now);
-      //cout << dt;
 
       lights_on = InSchedule();
       lights_on |= InSemaphor();
