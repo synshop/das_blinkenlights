@@ -21,7 +21,6 @@ using namespace std;
 #define SPI_SPEED 3000000
 #define LED_BRIGHTNESS 31
 
-
 #define PI 3.14159265
 #define NUM_LEDS 646
 #define FADE_VAL 1
@@ -685,7 +684,7 @@ void SinFade(uint8_t *buffer, uint8_t mode, int start_led, int size, float r1, f
   float result;
   float adjval;
 
-  for(int i = 0; i < size; i++)
+  for(int i = 0; i <= size; i++)
   {
     adjval = (180/size)*i;
     result = sin(adjval * PI / 180);
@@ -697,15 +696,15 @@ void SinFade(uint8_t *buffer, uint8_t mode, int start_led, int size, float r1, f
 
     if(mode)
     {
-      buffer[led_num*3] = std::max(b, float(buffer[led_num*3]));
-      buffer[led_num*3+1] = std::max(g, float(buffer[led_num*3+1]));
-      buffer[led_num*3+2] = std::max(r, float(buffer[led_num*3+2]));
+      buffer[led_num*3] = uint8_t (std::max(b, float(buffer[led_num*3])));
+      buffer[led_num*3+1] = uint8_t (std::max(g, float(buffer[led_num*3+1])));
+      buffer[led_num*3+2] = uint8_t (std::max(r, float(buffer[led_num*3+2])));
     }
     else
     {
-      buffer[led_num*3] = b;
-      buffer[led_num*3+1] = g;
-      buffer[led_num*3+2] = r;
+      buffer[led_num*3] = uint8_t (b);
+      buffer[led_num*3+1] = uint8_t (g);
+      buffer[led_num*3+2] = uint8_t (r);
     }
   }
 }
@@ -900,13 +899,13 @@ void RedAlert(long num_seconds)
   }
 
   // bottom right
-  SinFade(display_buffer, 0, 0,  172,0,0,0,r1,g1,b1);
+  SinFade(display_buffer, 0, 0,  170,0,0,0,r1,g1,b1);
   // top right
-  SinFade(display_buffer, 0, 173,172,0,0,0,r2,g2,b2);
+  SinFade(display_buffer, 0, 173,170,0,0,0,r2,g2,b2);
   // top left
-  SinFade(display_buffer, 0, 346,149,0,0,0,r2,g2,b2);
+  SinFade(display_buffer, 0, 346,147,0,0,0,r2,g2,b2);
   // bottom left
-  SinFade(display_buffer, 0, 496,149,0,0,0,r1,g1,b1);
+  SinFade(display_buffer, 0, 496,147,0,0,0,r1,g1,b1);
 
   DisplayBuffer(display_buffer);
 
