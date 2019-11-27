@@ -37,8 +37,8 @@ using namespace std;
 #define REPLACE 5
 
 // number of effects
-#define EFFECTS 9
-#define CUSTOM_EFFECTS 6
+#define EFFECTS 10
+#define CUSTOM_EFFECTS 7
 
 #define STATIC_EFFECTS 2
 
@@ -54,12 +54,15 @@ const static string effects[] = {
     "RandomTwoColorSparkle",
     "RedAlert",
     "RainbowSparkles",
-    "LavaLamp"
+    "LavaLamp",
+    "ColorOrgan"
 };
 
 uint8_t display_buffer[NUM_LEDS * 3];
 uint8_t buffer1[NUM_LEDS * 3];
 uint8_t buffer2[NUM_LEDS * 3];
+uint8_t buffer3[NUM_LEDS * 3];
+uint8_t buffer4[NUM_LEDS * 3];
 
 int signaled = 0;
 uint8_t lights_on = 0;
@@ -1119,6 +1122,112 @@ void LavaLamp(long num_seconds)
   }
 }
 
+void ColorOrgan(long num_seconds)
+{
+  uint8_t r1, g1, b1, r2, g2, b2, r3, b3, g3;
+  uint8_t blend = MAX;
+  uint8_t total_blobs = 3;
+
+  if(p_r1 || p_r2 || p_g1 || p_g2 || p_b1 || p_b2)
+  {
+    r1 = p_r1;
+    g1 = p_g1;
+    b1 = p_b1;
+    b2 = p_b2;
+    g2 = p_g2;
+    r2 = p_r2;
+    r3 = RandomColor(128);
+    g3 = RandomColor(128);
+    b3 = RandomColor(128);
+  }
+  else
+  {
+    r1 = 255;
+    g1 = 0;
+    b1 = 0;
+    r2 = 0;
+    g2 = 255;
+    b2 = 0;
+    r3 = 0;
+    g3 = 0;
+    b3 = 255;
+  }
+
+  cout << "Color Organ\n";
+
+  // seven blobs
+  // position, color, size, direction
+  float blobs[16];
+
+  for(int i=0 ; i < total_blobs ; i++)
+  {
+    // location
+    blobs[i*4] = rand() % NUM_LEDS;
+    // layer
+    blobs[i*4+1] = i + 1;
+    // size
+    blobs[i*4+2] = rand() % 20 + (NUM_LEDS / 4);
+    // speed
+    blobs[i*4+3] = float((rand() % 150)-75)/100;
+  }
+
+  time_t until = time(0) + num_seconds;
+
+  while(time(0) < until)
+  {
+    // clear work buffers
+    for(int i=0 ; i < NUM_LEDS * 3 ; i++)
+    {
+      buffer1[i] = 0;
+      buffer2[i] = 0;
+      buffer3[i] = 0;
+      buffer4[i] = 0;
+    }
+
+    // process blobs
+    for(int i=0 ; i < total_blobs ; i++)
+    {
+      // move blob
+      blobs[i*4] = blobs[i*4] + blobs[i*4+3];
+      if(blobs[i*4] < 0)
+      {
+        blobs[i*4] = blobs[i*4] + NUM_LEDS;
+      }
+      if(blobs[i*4] > NUM_LEDS)
+      {
+        blobs[i*4] = blobs[i*4] - NUM_LEDS;
+      }
+
+      // adjust blob size
+      blobs[i*4+2] = blobs[i*4+2] + ((rand() % 100)-50)/100;
+
+      // paint blob
+      switch(int (blobs[i*4+1]))
+      {
+      case 1:
+        SinFade(buffer1, 0, int(blobs[i*4]), int(blobs[i*4+2]), 0,0,0,r1,g1,b1);
+        break;
+      case 2:
+        SinFade(buffer2, 0, int(blobs[i*4]), int(blobs[i*4+2]), 0,0,0,r2,g2,b2);
+        break;
+      case 3:
+        SinFade(buffer3, 0, int(blobs[i*4]), int(blobs[i*4+2]), 0,0,0,r3,g3,b3);
+        break;
+      }
+    }
+
+    MixBuffers(buffer1, buffer2, buffer4, blend);
+    MixBuffers(buffer4, buffer3, display_buffer, blend);
+    DisplayBuffer(display_buffer);
+
+    usleep(100);
+    if(signaled)
+    {
+      break;
+    }
+  }
+}
+
 
 void RandomWhite(long num_seconds)
 {
@@ -1302,6 +1411,11 @@ int main()
           FadeOut();
           break;
         case 9:
+          digitalWrite(2, 1);
+          ColorOrgan(EFFECT_DELAY);
+          FadeOut();
+          break;
+        case 10:
           digitalWrite(2, 0);
           cout << "error no effect defined\n";
           break;
