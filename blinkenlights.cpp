@@ -16,6 +16,12 @@
 
 using namespace std;
 
+// speed of 6 million causes flicker unless we reduce the brightness to 7
+// #define SPI_SPEED 6000000
+#define SPI_SPEED 3000000
+#define LED_BRIGHTNESS 31
+
+
 #define PI 3.14159265
 #define NUM_LEDS 646
 #define FADE_VAL 1
@@ -38,6 +44,8 @@ using namespace std;
 #define STATIC_EFFECTS 2
 
 const static string effects[] = {
+    // Off
+    "Off",
     // non-customizable
     "Rainbow",
     "Sparkle",
@@ -74,10 +82,8 @@ void DisplayBuffer(uint8_t *buffer)
 
   uint8_t brightness;
 
-  //brightness = 15;
-
   // max brightness to reduce end of strip flicker
-  brightness = 7;
+  brightness = LED_BRIGHTNESS;
 
   // start of frame all 0x00
   uint8_t buf[1];
@@ -474,6 +480,7 @@ uint8_t InSemaphor(void)
     std::string line;
     while(std::getline(ifile,line))
     {
+      // read in colors
       if(line.substr(0,1) == "#"
          && line != "#000000"
          && line.find_first_not_of("0123456789abcdefABCDEF",1) == std::string::npos
@@ -1168,7 +1175,7 @@ int main()
   prev_handler = signal(SIGINT, signalHandler);
 
   wiringPiSetup();
-  if(wiringPiSPISetup(0, 6000000) < 0) {
+  if(wiringPiSPISetup(0, SPI_SPEED) < 0) {
     std::cerr << "wiringPiSPISetup failed" << std::endl;
   }
   pinMode(2, OUTPUT);
