@@ -37,8 +37,8 @@ using namespace std;
 #define REPLACE 5
 
 // number of effects
-#define EFFECTS 10
-#define CUSTOM_EFFECTS 7
+#define EFFECTS 12
+#define CUSTOM_EFFECTS 9
 
 #define STATIC_EFFECTS 2
 
@@ -55,7 +55,9 @@ const static string effects[] = {
     "RedAlert",
     "RainbowSparkles",
     "LavaLamp",
-    "ColorOrgan"
+    "ColorOrgan",
+    "SlowSparkle",
+    "SlowTwoColorSparkle"
 };
 
 uint8_t display_buffer[NUM_LEDS * 3];
@@ -596,6 +598,18 @@ void MixBuffers(uint8_t *buffer1, uint8_t *buffer2, uint8_t *mixed_buffer, uint8
   }
 }
 
+void FadeToBuffer(uint8_t *buffer1, uint8_t *buffer2, uint8_t mix_percentage)
+{
+  float diff = 0;
+
+  for(int i = 0; i < NUM_LEDS * 3; i++)
+  {
+    diff = ((float(buffer2[i]) - float(buffer1[i])) * (float (mix_percentage)/100));
+//    printf("%i %i %i\n", buffer1[i], buffer2[i], diff);
+    buffer1[i] = uint8_t(float(buffer1[i]) + diff);
+  }
+}
+
 uint8_t RandomColor(uint8_t seed)
 {
   if((rand() % 255) < seed)
@@ -770,6 +784,49 @@ void Sparkle(long num_seconds)
   }
 }
 
+void SlowSparkle(long num_seconds)
+{
+  uint8_t red_val = 0;
+  uint8_t green_val = 0;
+  uint8_t blue_val = 0;
+
+  cout << "Slow Sparkle\n";
+
+  time_t until = time(0) + num_seconds;
+
+  while(time(0) < until)
+  {
+    int pwmnum = rand() % NUM_LEDS;
+    red_val = RandomColor(128);
+    green_val = RandomColor(128);
+    blue_val = RandomColor(128);
+
+    buffer2[pwmnum*3] = blue_val;
+    buffer2[pwmnum*3+1] = green_val;
+    buffer2[pwmnum*3+2] = red_val;
+
+    pwmnum = rand() % NUM_LEDS;
+
+    buffer2[pwmnum*3] = 0;
+    buffer2[pwmnum*3+1] = 0;
+    buffer2[pwmnum*3+2] = 0;
+
+    pwmnum = rand() % NUM_LEDS;
+
+    buffer2[pwmnum*3] = 0;
+    buffer2[pwmnum*3+1] = 0;
+    buffer2[pwmnum*3+2] = 0;
+
+    DisplayBuffer(display_buffer);
+    FadeToBuffer(display_buffer, buffer2, 1);
+    usleep(20);
+    if(signaled)
+    {
+      break;
+    }
+  }
+}
+
 void RandomTwoColorSparkle(long num_seconds)
 {
   uint8_t r1, g1, b1, r2, g2, b2;
@@ -816,6 +873,73 @@ void RandomTwoColorSparkle(long num_seconds)
 
     DisplayBuffer(display_buffer);
     FadeBuffer(display_buffer, FADE_VAL);
+    usleep(20);
+    if(signaled)
+    {
+      break;
+    }
+  }
+}
+
+void SlowTwoColorSparkle(long num_seconds)
+{
+  uint8_t r1, g1, b1, r2, g2, b2;
+
+  if(p_r1 || p_r2 || p_g1 || p_g2 || p_b1 || p_b2)
+  {
+    r1 = p_r1;
+    g1 = p_g1;
+    b1 = p_b1;
+    b2 = p_b2;
+    g2 = p_g2;
+    r2 = p_r2;
+  }
+  else
+  {
+    r1 = RandomColor(128);
+    g1 = RandomColor(128);
+    b1 = RandomColor(128);
+    b2 = RandomColor(128);
+    g2 = RandomColor(128);
+    r2 = RandomColor(128);
+  }
+
+  cout << "Slow Two Color Sparkle\n";
+
+  time_t until = time(0) + num_seconds;
+
+  while(time(0) < until)
+  {
+    int pwmnum = rand() % NUM_LEDS;
+
+    if(rand() % 255 > 128)
+    {
+      buffer2[pwmnum*3] = b1;
+      buffer2[pwmnum*3+1] = g1;
+      buffer2[pwmnum*3+2] = r1;
+    }
+    else
+    {
+      buffer2[pwmnum*3] = b2;
+      buffer2[pwmnum*3+1] = g2;
+      buffer2[pwmnum*3+2] = r2;
+    }
+
+    pwmnum = rand() % NUM_LEDS;
+
+    buffer2[pwmnum*3] = 0;
+    buffer2[pwmnum*3+1] = 0;
+    buffer2[pwmnum*3+2] = 0;
+
+    pwmnum = rand() % NUM_LEDS;
+
+    buffer2[pwmnum*3] = 0;
+    buffer2[pwmnum*3+1] = 0;
+    buffer2[pwmnum*3+2] = 0;
+
+    DisplayBuffer(display_buffer);
+    FadeToBuffer(display_buffer, buffer2, 1);
+
     usleep(20);
     if(signaled)
     {
@@ -1014,15 +1138,28 @@ void RainbowSparkles(long num_seconds)
   {
     int pwmnum = rand() % NUM_LEDS;
 
-    buffer2[pwmnum*3] = b1;
-    buffer2[pwmnum*3+1] = g1;
-    buffer2[pwmnum*3+2] = r1;
+    buffer3[pwmnum*3] = b1;
+    buffer3[pwmnum*3+1] = g1;
+    buffer3[pwmnum*3+2] = r1;
+
+    FadeToBuffer(buffer2, buffer3, 75);
+
+    for(int i = 0 ; i < NUM_LEDS ; i++)
+    {
+      if(buffer2[pwmnum*3] >= (buffer3[pwmnum*3] - 100)
+         && buffer2[pwmnum*3+1] >= (buffer3[pwmnum*3+1] - 100)
+         && buffer2[pwmnum*3+2] >= (buffer3[pwmnum*3+2] - 100) )
+      {
+        buffer3[pwmnum*3] = 0;
+        buffer3[pwmnum*3+1] = 0;
+        buffer3[pwmnum*3+2] = 0;
+      }
+    }
 
     MixBuffers(buffer1, buffer2, display_buffer, mixval);
-    DisplayBuffer(display_buffer);
-    FadeBuffer(buffer2, FADE_VAL);
 
     DisplayBuffer(display_buffer);
+
     Rotate(buffer1, direction);
     usleep(100);
     if(signaled)
@@ -1358,6 +1495,8 @@ int main()
         }
       }
 
+      //current_effect = 11;
+
       // display the current effect
       switch(current_effect)
       {
@@ -1416,6 +1555,16 @@ int main()
           FadeOut();
           break;
         case 10:
+          digitalWrite(2, 1);
+          SlowSparkle(EFFECT_DELAY);
+          FadeOut();
+          break;
+        case 11:
+          digitalWrite(2, 1);
+          SlowTwoColorSparkle(EFFECT_DELAY);
+          FadeOut();
+          break;
+        case 12:
           digitalWrite(2, 0);
           cout << "error no effect defined\n";
           break;
