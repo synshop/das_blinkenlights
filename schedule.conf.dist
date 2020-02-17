@@ -10,6 +10,7 @@
 #   day: <day_of_month>
 #   year: <year>
 #   disabled: <true/false>
+#   open_status: <true/false>
 #
 # Schedule of Events
 Events:
@@ -17,15 +18,18 @@ Events:
     start_time: 18:00
     end_time: 22:00
     day_of_week: Mo,Tu,We,Th,Fr
+    open_status: true
   - event_name: Saturdays
     start_time: 15:00
     end_time: 22:00
     day_of_week: Sa
+    open_status: true
   - event_name: Board Meetings
     start_time: 13:00
     end_time: 15:00
     day_of_week: Sa
     week_day_number: 1
+    open_status: true
   - event_name: Work From Shop
     start_time: 7:00
     end_time: 16:00
@@ -34,3 +38,4 @@ Events:
     month: Nov
     day: 6
     year: 2019
+    open_status: false
