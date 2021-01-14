@@ -16,7 +16,7 @@
 
 using namespace std;
 
-// speed of 6 million causes flicker unless we reduce the brightness to 7
+// speed of 6 million causes flicker
 // #define SPI_SPEED 6000000
 #define SPI_SPEED 3000000
 #define LED_BRIGHTNESS 31
@@ -129,7 +129,7 @@ uint8_t InSchedule(void)
 
   stringstream parse_time;
   string hr_time, min_time;
-  int hr_time_int, min_time_int, start_secs, end_secs;
+  int hr_time_int, min_time_int, start_secs, end_secs, max_end_secs;
 
   const static string dow[] = {
     "Su",
@@ -165,7 +165,7 @@ uint8_t InSchedule(void)
   uint8_t in_mapping = 0;
   uint8_t in_read = 0;
 
-  string event_name, start_time, end_time, day_of_week, week_day_number, month, day_of_month, year, disabled;
+  string event_name, start_time, end_time, day_of_week, week_day_number, month, day_of_month, year, disabled, open_status;
 
   /* Initialize parser */
   if(!yaml_parser_initialize(&parser))
@@ -260,6 +260,8 @@ uint8_t InSchedule(void)
           min_time_int = atoi(min_time.c_str());
           end_secs = (hr_time_int * 3600) + (min_time_int * 60);
 
+          // cout << "end_secs: " << end_secs << endl;
+
           if(secs >= end_secs)
           {
             // It's past the end time
@@ -329,6 +331,7 @@ uint8_t InSchedule(void)
       day_of_month.clear();
       year.clear();
       disabled.clear();
+      open_status.clear();
 
       break;
     /* Data */
@@ -391,6 +394,11 @@ uint8_t InSchedule(void)
               week_day_number = reinterpret_cast<char*>(event.data.scalar.value);
 
               break;
+            case 10:
+              // read in open status next
+              open_status = reinterpret_cast<char*>(event.data.scalar.value);
+
+              break;
           }
           in_read = 0;
         }
@@ -441,6 +449,11 @@ uint8_t InSchedule(void)
           {
             // read in Day of Week next
             in_read = 9;
+          }
+          if(strcmp(reinterpret_cast<const char *>(event.data.scalar.value), "open_status") == 0)
+          {
+            // read in Open Status
+            in_read = 10;
           }
         }
       }
